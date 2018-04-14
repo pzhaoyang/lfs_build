@@ -60,3 +60,14 @@ ret=$[ret+$?]
 [ $ret == 0 ] || (error "Setup Environment(2) Failed" && exit 0) && success "Setup Environment(2) success"
 
 
+echo "::5. Add User"
+usr="lfs"
+[ x`cat /etc/group | grep "^$usr" | cut -d":" -f1` == x"$usr" ] || groupadd $usr
+ret=$[ret+$?]
+[ x`cat /etc/passwd | grep "^$usr" | cut -d":" -f1` == x"$usr" ] || useradd -s /bin/bash -g $usr -m -k /dev/null $usr
+ret=$[ret+$?]
+[ $ret == 0 ] || (error "Add User Failed" && exit 0) && success "Add User success"
+passwd $usr
+
+chown -v $usr $LFS/tools
+chown -v $usr $LFS/sources
