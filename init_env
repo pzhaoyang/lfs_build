@@ -1,0 +1,62 @@
+#!/bin/sh
+
+OK=0
+
+msg() {
+  printf '%b\n' "$1" >&2
+}
+
+success() {
+  if [ "$ret" -eq $OK ]; then
+    msg "\33[32m[✔]\33[0m ${1}${2}"
+  fi
+}
+
+error() {
+  msg "\33[31m[✘]\33[0m ${1}${2}"
+}
+
+
+
+echo "::1. Check Host Software Version"
+ret=`./version-check.sh`
+if [ $OK != $ret ]; then
+    error "The Host Software is NOT correct, Please Check it first and rerun this script($0) again."
+else
+    success "Host softwoare is correctly."
+fi
+
+
+echo "::2. Set Environment(1)"
+export LFS=/mnt/lfs
+device=/dev/sdb
+success "Environment Setup Successed"
+
+
+echo "::3. Format Disk"
+[ `lsblk /dev/sdb -f -n -o fstype` == "ext4" ] || mkfs.ext4 -v $device
+ret=$?
+[ $ret == 0 ] || (error "Format Disk Failed" && exit 0) && success "Format Disk($device) success"
+
+
+
+
+echo "::4. Mount Disk"
+mkdir -pv $LFS
+ret=$?
+[ ! -z `lsblk -n $device -o mountpoint` ] || mount -v -t ext4 $device $LFS
+ret=$[ret+$?]
+[ $ret == 0 ] || (error "Mount Disk Failed" && exit 0) && success "Mount Disk($device) to $LFS success"
+
+echo "::5. Setup Environment(2)"
+[ -d "$LFS/sources" ] || mkdir -v $LFS/sources
+ret=$[ret+$?]
+chmod -v a+wt $LFS/sources
+ret=$[ret+$?]
+[ -d "$LFS/tools" ] || mkdir -pv $LFS/tools
+ret=$[ret+$?]
+[ -h "/tools" ] || ln -svf $LFS/tools /
+ret=$[ret+$?]
+[ $ret == 0 ] || (error "Setup Environment(2) Failed" && exit 0) && success "Setup Environment(2) success"
+
+
